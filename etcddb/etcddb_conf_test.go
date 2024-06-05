@@ -1,12 +1,13 @@
 package etcddb
 
 import (
-	"github.com/singnet/snet-daemon/blockchain"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/singnet/snet-daemon/blockchain"
 	"github.com/singnet/snet-daemon/config"
+
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,6 +38,7 @@ func TestCustomEtcdClientConf(t *testing.T) {
 	assert.Equal(t, 5*time.Second, conf.RequestTimeout)
 	assert.Equal(t, []string{"http://127.0.0.1:2479"}, conf.Endpoints)
 }
+
 func TestCustomEtcdClientConfWithDefault(t *testing.T) {
 	var testJsonOrgGroupData = "{   \"org_name\": \"organization_name\",   \"org_id\": \"org_id1\",   \"groups\": [     {       \"group_name\": \"default_group2\",       \"group_id\": \"99ybRIg2wAx55mqVsA6sB4S7WxPQHNKqa4BPu/bhj+U=\",       \"payment\": {         \"payment_address\": \"0x671276c61943A35D5F230d076bDFd91B0c47bF09\",         \"payment_expiration_threshold\": 40320,         \"payment_channel_storage_type\": \"etcd\",         \"payment_channel_storage_client\": {           \"connection_timeout\": \"15s\",                    \"endpoints\": [             \"http://127.0.0.1:2479\"           ]         }       }     },      {       \"group_name\": \"default_group\",       \"group_id\": \"99ybRIg2wAx55mqVsA6sB4S7WxPQHNKqa4BPu/bhj+U=\",       \"payment\": {         \"payment_address\": \"0x671276c61943A35D5F230d076bDFd91B0c47bF09\",         \"payment_expiration_threshold\": 40320,         \"payment_channel_storage_type\": \"etcd\",         \"payment_channel_storage_client\": {           \"connection_timeout\": \"5s\",           \"request_timeout\": \"3s\"                 }       }     }   ] }"
 	metadata, err := blockchain.InitOrganizationMetaDataFromJson(testJsonOrgGroupData)
