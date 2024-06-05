@@ -1,12 +1,13 @@
 package etcddb
 
 import (
-	"github.com/singnet/snet-daemon/blockchain"
 	"strings"
 	"time"
 
-	"github.com/coreos/pkg/capnslog"
+	"github.com/singnet/snet-daemon/blockchain"
 	"github.com/singnet/snet-daemon/config"
+
+	"github.com/coreos/pkg/capnslog"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )

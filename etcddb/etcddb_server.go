@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/singnet/snet-daemon/config"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"go.etcd.io/etcd/server/v3/embed"

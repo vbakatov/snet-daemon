@@ -5,19 +5,19 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/golang-collections/collections/set"
-	"github.com/singnet/snet-daemon/blockchain"
-	"github.com/singnet/snet-daemon/storage"
-	"github.com/singnet/snet-daemon/utils"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/singnet/snet-daemon/blockchain"
 	"github.com/singnet/snet-daemon/config"
+	"github.com/singnet/snet-daemon/storage"
+	"github.com/singnet/snet-daemon/utils"
+
+	"github.com/golang-collections/collections/set"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-
-	"go.etcd.io/etcd/client/v3"
+	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/concurrency"
 )
 
@@ -95,6 +95,7 @@ func NewEtcdClientFromVip(vip *viper.Viper, metaData *blockchain.OrganizationMet
 	}
 	return
 }
+
 func getTlsConfig() (*tls.Config, error) {
 
 	log.Debug("enabling SSL support via X509 keypair")
@@ -214,7 +215,7 @@ func (client *EtcdClient) CompareAndSwap(key string, prevValue string, newValue 
 		ConditionKeys:           []string{key},
 		Update: func(oldValues []storage.KeyValueData) (update []storage.KeyValueData, ok bool, err error) {
 			if oldValues[0].Present && strings.Compare(oldValues[0].Value, prevValue) == 0 {
-				return []storage.KeyValueData{storage.KeyValueData{
+				return []storage.KeyValueData{{
 					Key:   key,
 					Value: newValue,
 				}}, true, nil
@@ -269,7 +270,7 @@ func (client *EtcdClient) PutIfAbsent(key string, value string) (ok bool, err er
 			if oldValues[0].Present {
 				return nil, false, nil
 			}
-			return []storage.KeyValueData{storage.KeyValueData{
+			return []storage.KeyValueData{{
 				Key:   key,
 				Value: value,
 			}}, true, nil
