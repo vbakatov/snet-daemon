@@ -212,7 +212,7 @@ func (d *daemon) start() {
 					fmt.Fprintln(resp, d.components.ServiceMetaData().GetWireEncoding())
 				} else if strings.Split(req.URL.Path, "/")[1] == "heartbeat" {
 					resp.Header().Set("Access-Control-Allow-Origin", "*")
-					metrics.HeartbeatHandler(resp, req)
+					metrics.HeartbeatHandler(resp, d.components.daemonHeartbeat.TrainingInProto)
 				} else {
 					http.NotFound(resp, req)
 				}

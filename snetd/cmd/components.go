@@ -517,8 +517,15 @@ func (components *Components) DaemonHeartBeat() (service *metrics.DaemonHeartbea
 	if components.daemonHeartbeat != nil {
 		return components.daemonHeartbeat
 	}
+
 	metrics.SetDaemonGrpId(components.OrganizationMetaData().GetGroupIdString())
-	components.daemonHeartbeat = &metrics.DaemonHeartbeat{DaemonID: metrics.GetDaemonID(), DaemonVersion: config.GetVersionTag()}
+
+	components.daemonHeartbeat = &metrics.DaemonHeartbeat{
+		TrainingInProto: len(components.ServiceMetaData().TrainingMethods) > 0,
+		DaemonID:        metrics.GetDaemonID(),
+		DaemonVersion:   config.GetVersionTag(),
+	}
+
 	return components.daemonHeartbeat
 }
 

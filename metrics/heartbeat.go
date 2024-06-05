@@ -106,14 +106,11 @@ func getStorageCertificateDetails() (cert StorageClientCert) {
 		cert.ValidFrom = fmt.Sprintf("Valid Since: %+v days", parseCertificate.NotBefore.String())
 		cert.ValidTill = fmt.Sprintf("Valid Till: %+v days", parseCertificate.NotAfter.String())
 	}
-	if err != nil {
-		log.WithError(fmt.Errorf("unable to load specific SSL X509 keypair for storage certificate"))
-	}
 	return
 }
 
 // prepares the heartbeat, which includes calling to underlying service DAemon is serving
-func GetHeartbeat(serviceURL string, serviceType string, serviceID string) (heartbeat DaemonHeartbeat, err error) {
+func GetHeartbeat(serviceURL string, serviceType string, serviceID string, trainingInProto bool) (heartbeat DaemonHeartbeat, err error) {
 	heartbeat = DaemonHeartbeat{
 		GetDaemonID(),
 		strconv.FormatInt(getEpochTime(), 10),
@@ -121,7 +118,7 @@ func GetHeartbeat(serviceURL string, serviceType string, serviceID string) (hear
 		"{}",
 		config.GetVersionTag(),
 		config.GetBool(config.ModelTrainingEnabled),
-		false, // TODO
+		trainingInProto,
 		config.GetBool(config.BlockchainEnabledKey),
 		config.GetString(config.BlockChainNetworkSelected),
 		getStorageCertificateDetails()}
@@ -163,12 +160,12 @@ func GetHeartbeat(serviceURL string, serviceType string, serviceID string) (hear
 
 // Heartbeat request handler function : upon request it will hit the service for status and
 // wraps the results in daemons heartbeat
-func HeartbeatHandler(rw http.ResponseWriter, r *http.Request) {
+func HeartbeatHandler(rw http.ResponseWriter, trainingInProto bool) {
 	// read the heartbeat service type and corresponding URL
 	serviceType := config.GetString(config.ServiceHeartbeatType)
 	serviceURL := config.GetString(config.HeartbeatServiceEndpoint)
 	serviceID := config.GetString(config.ServiceId)
-	heartbeat, _ := GetHeartbeat(serviceURL, serviceType, serviceID)
+	heartbeat, _ := GetHeartbeat(serviceURL, serviceType, serviceID, trainingInProto)
 	err := json.NewEncoder(rw).Encode(heartbeat)
 	if err != nil {
 		log.WithError(err).Infof("Failed to write heartbeat message.")
@@ -179,7 +176,7 @@ func HeartbeatHandler(rw http.ResponseWriter, r *http.Request) {
 func (service *DaemonHeartbeat) Check(ctx context.Context, req *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 
 	heartbeat, err := GetHeartbeat(config.GetString(config.HeartbeatServiceEndpoint), config.GetString(config.ServiceHeartbeatType),
-		config.GetString(config.ServiceId))
+		config.GetString(config.ServiceId), service.TrainingInProto)
 
 	if strings.Compare(heartbeat.Status, Online.String()) == 0 {
 		return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
