@@ -60,8 +60,7 @@ configuration is one JSON object located in ```log``` field.
       removed.
 
   * **hooks** (default: []) - list of names of the hooks which will be executed
-    when message with specified log level appears in log. See [logrus
-    hooks](https://github.com/sirupsen/logrus#hooks). List contains names of
+    when message with specified log level appears in log. List contains names of
     the hooks and hook configuration can be found by name prefix.  Thus for
     hook named ```<hook-name>``` properties will start from
     ```log.<hook-name>.``` prefix.
@@ -70,7 +69,7 @@ configuration is one JSON object located in ```log``` field.
 
     * **type** (required) - Type of the hook. this type is used to find actual
       hook implementation. Hook types supported:
-      * mail_auth - [logrus_mail](https://github.com/zbindenren/logrus_mail)
+      * mail_auth
 
     * **levels** (required) - list of log levels to trigger the hook. 
 
@@ -90,7 +89,7 @@ call [NewMailAuthHook method](https://godoc.org/github.com/zbindenren/logrus_mai
 * username
 * password
 
-Resulting log configuration using logrus_mail hook:
+Resulting log configuration using mail hook:
 ```json
   "log": {
     ...
