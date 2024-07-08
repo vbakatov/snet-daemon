@@ -3,13 +3,15 @@ package escrow
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/singnet/snet-daemon/authutils"
 	"github.com/singnet/snet-daemon/blockchain"
 	"github.com/singnet/snet-daemon/config"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/spf13/viper"
-	"math/big"
+	"go.uber.org/zap"
 )
 
 const (
@@ -87,10 +89,11 @@ func NewChannelPaymentValidator(processor *blockchain.Processor, cfg *viper.Vipe
 // Validate returns instance of PaymentError as error if validation fails, nil
 // otherwise.
 func (validator *ChannelPaymentValidator) Validate(payment *Payment, channel *PaymentChannelData) (err error) {
-	var log = log.WithField("payment", payment).WithField("channel", channel)
+	paymentFieldLog := zap.Any("payment", payment)
+	channelFieldLog := zap.Any("channel", channel)
 
 	if payment.ChannelNonce.Cmp(channel.Nonce) != 0 {
-		log.Warn("Incorrect nonce is sent by client")
+		zap.L().Warn("Incorrect nonce is sent by client", paymentFieldLog, channelFieldLog)
 		return NewPaymentError(IncorrectNonce, "incorrect payment channel nonce, latest: %v, sent: %v", channel.Nonce, payment.ChannelNonce)
 	}
 
@@ -99,9 +102,9 @@ func (validator *ChannelPaymentValidator) Validate(payment *Payment, channel *Pa
 		return NewPaymentError(Unauthenticated, "payment signature is not valid")
 	}
 
-	log = log.WithField("signerAddress", blockchain.AddressToHex(signerAddress))
+	signerAddressFieldLog := zap.String("signerAddress", blockchain.AddressToHex(signerAddress))
 	if *signerAddress != channel.Signer && *signerAddress != channel.Sender {
-		log.WithField("signerAddress", blockchain.AddressToHex(signerAddress)).Warn("Channel signer is not equal to payment signer/sender")
+		zap.L().Warn("Channel signer is not equal to payment signer/sender", signerAddressFieldLog)
 		return NewPaymentError(Unauthenticated, "payment is not signed by channel signer/sender")
 	}
 	currentBlock, e := validator.currentBlock()
@@ -111,12 +114,12 @@ func (validator *ChannelPaymentValidator) Validate(payment *Payment, channel *Pa
 	expirationThreshold := validator.paymentExpirationThreshold()
 	currentBlockWithThreshold := new(big.Int).Add(currentBlock, expirationThreshold)
 	if currentBlockWithThreshold.Cmp(channel.Expiration) >= 0 {
-		log.WithField("currentBlock", currentBlock).WithField("expirationThreshold", expirationThreshold).Warn("Channel expiration time is after expiration threshold")
+		zap.L().Warn("Channel expiration time is after expiration threshold", zap.Any("currentBlock", currentBlock), zap.Any("expirationThreshold", expirationThreshold))
 		return NewPaymentError(Unauthenticated, "payment channel is near to be expired, expiration time: %v, current block: %v, expiration threshold: %v", channel.Expiration, currentBlock, expirationThreshold)
 	}
 
 	if channel.FullAmount.Cmp(payment.Amount) < 0 {
-		log.Warn("Not enough tokens on payment channel")
+		zap.L().Warn("Not enough tokens on payment channel")
 		return NewPaymentError(Unauthenticated, "not enough tokens on payment channel, channel amount: %v, payment amount: %v", channel.FullAmount, payment.Amount)
 	}
 
@@ -148,7 +151,7 @@ func (validator *FreeCallPaymentValidator) getSignerAddressForFreeCall(payment *
 
 	signer, err = authutils.GetSignerAddressFromMessage(message, payment.Signature)
 	if err != nil {
-		log.WithField("payment", payment).WithError(err).Error("Cannot get signer from payment")
+		zap.L().Error("Cannot get signer from payment", zap.Any("payment", payment), zap.Error(err))
 		return nil, err
 	}
 	return signer, err
@@ -165,11 +168,11 @@ func getSignerAddressFromPayment(payment *Payment) (signer *common.Address, err 
 
 	signer, err = authutils.GetSignerAddressFromMessage(message, payment.Signature)
 	if err != nil {
-		log.WithField("payment", payment).WithError(err).Error("Cannot get signer from payment")
+		zap.L().Error("Cannot get signer from payment", zap.Error(err), zap.Any("payment", payment))
 		return nil, err
 	}
 	if err = checkCurationValidations(signer); err != nil {
-		log.Error(err)
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 
@@ -205,11 +208,11 @@ func getUserAddressFromSignatureOfFreeCalls(payment *FreeCallPayment) (signer *c
 
 	signer, err = authutils.GetSignerAddressFromMessage(message, payment.Signature)
 	if err != nil {
-		log.WithField("payment", payment).WithError(err).Error("Cannot get signer from payment")
+		zap.L().Error("Cannot get signer from payment", zap.Error(err), zap.Any("payment", payment))
 		return nil, err
 	}
 	if err = checkCurationValidations(signer); err != nil {
-		log.Error(err)
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 	return signer, err

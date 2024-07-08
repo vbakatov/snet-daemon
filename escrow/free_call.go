@@ -2,8 +2,9 @@ package escrow
 
 import (
 	"fmt"
+
 	"github.com/singnet/snet-daemon/blockchain"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
 )
 
 type lockingFreeCallUserService struct {
@@ -78,7 +79,7 @@ func (h *lockingFreeCallUserService) StartFreeCallUserTransaction(payment *FreeC
 		return nil, NewPaymentError(Internal, "payment freeCallUserData error:"+err.Error())
 	}
 	if !ok {
-		log.Warn("Payment freeCallUserData not found")
+		zap.L().Warn("Payment freeCallUserData not found")
 		return nil, NewPaymentError(Unauthenticated, "payment freeCallUserData \"%v\" not found", userKey)
 	}
 
@@ -94,7 +95,9 @@ func (h *lockingFreeCallUserService) StartFreeCallUserTransaction(payment *FreeC
 			e := lock.Unlock()
 			if e != nil {
 				//todo send a notification to the devloper ( contact email is in service metadata)
-				log.WithError(e).WithField("userKey", userKey).WithField("err", err).Error("Transaction is cancelled because of err, but freeCallUserData cannot be unlocked. All other transactions on this freeCallUserData will be blocked until unlock. Please unlock freeCallUserData manually.")
+				zap.L().Error("Transaction is cancelled because of err, but freeCallUserData cannot be unlocked. All other transactions on this freeCallUserData will be blocked until unlock. Please unlock freeCallUserData manually.",
+					zap.Any("userKey", userKey),
+					zap.Error(err))
 			}
 		}
 	}(lock)
@@ -118,26 +121,25 @@ func (transaction *freeCallTransaction) Commit() error {
 		err := payment.lock.Unlock()
 		if err != nil {
 			//todo send a notification to the developer defined in service metadata
-			log.WithError(err).WithField("transaction", payment).
-				Error("free call user cannot be unlocked because of error." +
-					" All other transactions on this channel will be blocked until unlock." +
-					" Please unlock user for free calls manually.")
+			zap.L().Error("free call user cannot be unlocked because of error."+
+				" All other transactions on this channel will be blocked until unlock."+
+				" Please unlock user for free calls manually.", zap.Any("transaction", payment), zap.Error(err))
 		} else {
-			log.Debug("free call user unlocked")
+			zap.L().Debug("free call user unlocked")
 		}
 	}(transaction)
 
 	IncrementFreeCallCount(transaction.FreeCallUser())
-	e := transaction.service.storage.Put(
+	err := transaction.service.storage.Put(
 		transaction.freeCallUserKey,
 		transaction.FreeCallUser(),
 	)
-	if e != nil {
-		log.WithError(e).Error("Unable to store new transaction free call user state")
+	if err != nil {
+		zap.L().Error("Unable to store new transaction free call user state")
 		return NewPaymentError(Internal, "unable to store new transaction free call user state")
 	}
 
-	log.Debug("Free Call Payment completed")
+	zap.L().Debug("Free Call Payment completed")
 	return nil
 }
 
@@ -145,9 +147,10 @@ func (payment *freeCallTransaction) Rollback() error {
 	defer func(payment *freeCallTransaction) {
 		err := payment.lock.Unlock()
 		if err != nil {
-			log.WithError(err).WithField("payment", payment).Error("free call user cannot be unlocked because of error. All other transactions on this channel will be blocked until unlock. Please unlock channel manually.")
+			zap.L().Error("free call user cannot be unlocked because of error. All other transactions on this channel will be blocked until unlock. Please unlock channel manually.",
+				zap.Error(err), zap.Any("payment", payment))
 		} else {
-			log.Debug("Free call Payment rolled back, free call user unlocked")
+			zap.L().Debug("Free call Payment rolled back, free call user unlocked")
 		}
 	}(payment)
 	return nil

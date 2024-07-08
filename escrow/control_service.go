@@ -5,14 +5,16 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"math/big"
+	"sort"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/singnet/snet-daemon/authutils"
 	"github.com/singnet/snet-daemon/blockchain"
-	log "github.com/sirupsen/logrus"
+
+	"go.uber.org/zap"
 	"golang.org/x/net/context"
-	"math/big"
-	"sort"
 )
 
 type ProviderControlService struct {
@@ -108,7 +110,7 @@ func (service *ProviderControlService) StartClaimForMultipleChannels(ctx context
 	}
 	err = service.removeClaimedPayments()
 	if err != nil {
-		log.Errorf("unable to remove payments from which are already claimed")
+		zap.L().Error("unable to remove payments from which are already claimed")
 		return nil, err
 	}
 	return service.startClaims(request)
@@ -198,7 +200,7 @@ func (service *ProviderControlService) GetListInProgress(ctx context.Context, re
 	}
 	err = service.removeClaimedPayments()
 	if err != nil {
-		log.Errorf("unable to remove payments from which are already claimed")
+		zap.L().Error("unable to remove payments from which are already claimed")
 		return nil, err
 	}
 	return service.listClaims()
@@ -224,7 +226,7 @@ func (service *ProviderControlService) StartClaim(ctx context.Context, startClai
 	//Remove any payments already claimed on block chain
 	err = service.removeClaimedPayments()
 	if err != nil {
-		log.Error("unable to remove payments from etcd storage which are already claimed in block chain")
+		zap.L().Error("unable to remove payments from etcd storage which are already claimed in block chain")
 		return nil, err
 	}
 	return service.beginClaimOnChannel(bytesToBigInt(startClaim.GetChannelId()))
@@ -274,7 +276,7 @@ func (service *ProviderControlService) getMessageBytes(prefixMessage string, req
 func (service *ProviderControlService) verifySigner(message []byte, signature []byte) error {
 	signer, err := authutils.GetSignerAddressFromMessage(message, signature)
 	if err != nil {
-		log.Error(err)
+		zap.L().Error(err.Error())
 		return err
 	}
 	if err = authutils.VerifyAddress(*signer, service.organizationMetaData.GetPaymentAddress()); err != nil {
@@ -336,7 +338,7 @@ func (service *ProviderControlService) listClaims() (*PaymentsListReply, error) 
 	//retrieve all the claims in progress
 	claimsRetrieved, err := service.channelService.ListClaims()
 	if err != nil {
-		log.Error("error in retrieving claims")
+		zap.L().Error("error in retrieving claims")
 		return nil, err
 	}
 	output := make([]*PaymentReply, 0)
@@ -345,12 +347,13 @@ func (service *ProviderControlService) listClaims() (*PaymentsListReply, error) 
 		//To Get the Expiration of the Channel ( always get the latest state)
 		latestChannel, ok, err := service.channelService.PaymentChannel(&PaymentChannelKey{ID: payment.ChannelID})
 		if !ok || err != nil {
-			log.Errorf("Unable to retrieve the latest Channel State, ChannelID: %v, ChannelNonde: %v", payment.ChannelID, payment.ChannelNonce)
+			zap.L().Error("Unable to retrieve the latest Channel State", zap.Any("ChanelID", payment.ChannelID), zap.Any("ChannelNonce", payment.ChannelNonce))
 			continue
 		}
 		if payment.Signature == nil || payment.Amount.Int64() == 0 {
-			log.Errorf("The Signature or the Amount is not defined on the Payment with"+
-				" Channel Id:%v , Nonce:%v", payment.ChannelID, payment.ChannelNonce)
+			zap.L().Error("The Signature or the Amount is not defined on the Payment with",
+				zap.Any("ChannelID", payment.ChannelID),
+				zap.Any("ChannelNonce", payment.ChannelNonce))
 			continue
 		}
 		paymentReply := &PaymentReply{
@@ -395,12 +398,13 @@ func (service *ProviderControlService) removeClaimedPayments() error {
 		if blockChainChannel.Nonce.Cmp(payment.ChannelNonce) > 0 {
 			//if the Nonce on this block chain is higher than that of the Payment,
 			//means that the payment has been completed , hence update the etcd state with this
-			log.Debugf("for channel id: %v the nonce of channel from Block chain (%v) is "+
-				"greater than nonce of channel from etcd storage (%v)",
-				payment.ChannelID, blockChainChannel.Nonce, payment.ChannelNonce)
+			zap.L().Debug("the nonce of channel from Blockchain is greater than nonce of channel from etcd storage",
+				zap.Any("ChannelID", payment.ChannelID),
+				zap.Any("BlockchainNonce", blockChainChannel.Nonce),
+				zap.Any("ChannelNonce", payment.ChannelNonce))
 			err = claimRetrieved.Finish()
 			if err != nil {
-				log.Error(err)
+				zap.L().Error(err.Error())
 				return err
 			}
 		}

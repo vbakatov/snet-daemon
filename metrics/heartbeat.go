@@ -11,14 +11,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/singnet/snet-daemon/config"
-	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc/health/grpc_health_v1"
+	"go.uber.org/zap"
+
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // status enum
@@ -91,23 +94,20 @@ func ValidateHeartbeatConfig() error {
 }
 func getStorageCertificateDetails() (cert StorageClientCert) {
 	cert = StorageClientCert{}
-	log.Debug("enabling SSL support via X509 keypair")
+	zap.L().Debug("enabling SSL support via X509 keypair")
 	certificate, err := tls.LoadX509KeyPair(config.GetString(config.PaymentChannelCertPath), config.GetString(config.PaymentChannelKeyPath))
 	if err != nil {
-		log.WithError(fmt.Errorf("unable to load specific SSL X509 keypair for storage certificate %v", err))
+		zap.L().Error("unable to load specific SSL X509 keypair for storage certificate", zap.Error(err))
 		return
 	}
 	if len(certificate.Certificate) > 0 {
 		parseCertificate, err := x509.ParseCertificate(certificate.Certificate[0])
 		if err != nil {
-			log.WithError(fmt.Errorf("unable to get certificate infor %v", err))
+			zap.L().Error("unable to get certificate infor", zap.Error(err))
 			return
 		}
 		cert.ValidFrom = fmt.Sprintf("Valid Since: %+v days", parseCertificate.NotBefore.String())
 		cert.ValidTill = fmt.Sprintf("Valid Till: %+v days", parseCertificate.NotAfter.String())
-	}
-	if err != nil {
-		log.WithError(fmt.Errorf("unable to load specific SSL X509 keypair for storage certificate"))
 	}
 	return
 }
@@ -130,14 +130,14 @@ func GetHeartbeat(serviceURL string, serviceType string, serviceID string) (hear
 	if serviceType == "none" || serviceType == "" || isNoHeartbeatURL {
 		curResp = `{"serviceID":"` + serviceID + `","status":"SERVING"}`
 	} else {
-		var svcHeartbeat []byte
+		var serviceHeartbeat []byte
 		if serviceType == "grpc" {
 			var response grpc_health_v1.HealthCheckResponse_ServingStatus
 			response, err = callgRPCServiceHeartbeat(serviceURL)
 			//Standardize this as well on the response being sent
 			heartbeat.Status = response.String()
 		} else if serviceType == "http" || serviceType == "https" {
-			svcHeartbeat, err = callHTTPServiceHeartbeat(serviceURL)
+			serviceHeartbeat, err = callHTTPServiceHeartbeat(serviceURL)
 		}
 		if err != nil {
 			heartbeat.Status = Warning.String()
@@ -153,8 +153,8 @@ func GetHeartbeat(serviceURL string, serviceType string, serviceID string) (hear
 			}
 			notification.Send()
 		} else {
-			log.Debugf("Service %s status : %s", serviceURL, svcHeartbeat)
-			curResp = string(svcHeartbeat)
+			zap.L().Debug("Get herbeat", zap.String("ServiceUrl", serviceURL), zap.String("Service", string(serviceHeartbeat)))
+			curResp = string(serviceHeartbeat)
 		}
 	}
 	heartbeat.ServiceHeartbeat = curResp
@@ -171,7 +171,7 @@ func HeartbeatHandler(rw http.ResponseWriter, r *http.Request) {
 	heartbeat, _ := GetHeartbeat(serviceURL, serviceType, serviceID)
 	err := json.NewEncoder(rw).Encode(heartbeat)
 	if err != nil {
-		log.WithError(err).Infof("Failed to write heartbeat message.")
+		zap.L().Info("Failed to write heartbeat message.", zap.Error(err))
 	}
 }
 

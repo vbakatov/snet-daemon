@@ -2,11 +2,13 @@ package escrow
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/singnet/snet-daemon/blockchain"
 	"github.com/singnet/snet-daemon/config"
-	log "github.com/sirupsen/logrus"
+	"go.uber.org/zap"
+
 	"golang.org/x/net/context"
-	"math/big"
 )
 
 type FreeCallStateService struct {
@@ -37,7 +39,7 @@ func (service *BlockChainDisabledFreeCallStateService) mustEmbedUnimplementedFre
 func (service *FreeCallStateService) GetFreeCallsAvailable(context context.Context,
 	request *FreeCallStateRequest) (reply *FreeCallStateReply, err error) {
 	if err = service.verify(request); err != nil {
-		log.WithError(err).Errorf("Error in authorizing the request")
+		zap.L().Error("Error in authorizing the request", zap.Error(err))
 		return nil, err
 	}
 	availableCalls, err := service.checkForFreeCalls(service.getFreeCallPayment(request))
