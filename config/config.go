@@ -66,6 +66,7 @@ const (
 	TokenExpiryInMinutes        = "token_expiry_in_minutes"
 	TokenSecretKey              = "token_secret_key"
 	BlockchainProviderApiKey    = "blockchain_provider_api_key"
+	FreeCallsUsers              = "free_calls_users"
 	//none|grpc|http
 	//This defaultConfigJson will eventually be replaced by DefaultDaemonConfigurationSchema
 	defaultConfigJson string = `
@@ -102,7 +103,7 @@ const (
 		},
 		"output": {
 			"type": "file",
-			"file_pattern": "./snet-daemon.%Y%m%d.log",
+			"file_pattern": "./snet-daemon.%Y%m%d$M.log",
 			"current_link": "./snet-daemon.log",
 			"rotation_time_in_sec": 86400,
 			"max_age_in_sec": 604800,
@@ -151,21 +152,12 @@ const (
 		"timezone": "UTC",
 		"formatter": {
 			"type": "text",
-			"timestamp_format": "2006-01-02T15:04:05.999999999Z07:00"
 		},
 		"output": {
 			"type": "file",
-			"file_pattern": "./snet-daemon.%Y%m%d.log",
-			"current_link": "./snet-daemon.log",
-			"rotation_time_in_sec": 86400,
-			"max_age_in_sec": 604800,
-			"rotation_count": 0
-		},
-		"hooks": []
-	},
+		}
+},
 	"payment_channel_storage_client": {
-		"connection_timeout": "5s",
-		"request_timeout": "3s",
 		"endpoints": ["http://127.0.0.1:2379"]
 	}}`
 )
@@ -300,6 +292,20 @@ func GetDuration(key string) time.Duration {
 
 func GetBool(key string) bool {
 	return vip.GetBool(key)
+}
+
+func GetStringMap(key string) map[string]any {
+	return vip.GetStringMap(key)
+}
+
+func GetFreeCallsCount(userID string) (countFreeCallsAllowed int) {
+	freeCallsUsers := GetStringMap(FreeCallsUsers)
+	if countFreeCalls, ok := freeCallsUsers[userID]; ok {
+		if count, countOk := countFreeCalls.(float64); countOk {
+			countFreeCallsAllowed = int(count)
+		}
+	}
+	return
 }
 
 func Get(key string) any {

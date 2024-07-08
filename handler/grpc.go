@@ -254,7 +254,7 @@ type serviceCredential struct {
 	Location httpLocation `json:"location"`
 }
 
-func (g grpcHandler) grpcToHTTP(srv interface{}, inStream grpc.ServerStream) error {
+func (g grpcHandler) grpcToHTTP(srv any, inStream grpc.ServerStream) error {
 	method, ok := grpc.MethodFromServerStream(inStream)
 
 	if !ok {

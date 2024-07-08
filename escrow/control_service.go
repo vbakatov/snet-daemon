@@ -62,6 +62,8 @@ func NewProviderControlService(channelService PaymentChannelService, serMetaData
 }
 
 /*
+	GetListUnclaimed
+
 Get list of unclaimed payments, we do this by getting the list of channels in progress which have some amount to be claimed.
 Verify that mpe_address is correct
 Verify that actual block_number is not very different (+-5 blocks) from the current_block_number from the signature
@@ -212,16 +214,16 @@ func (service *ProviderControlService) GetListInProgress(ctx context.Context, re
 // Check for any claims already done on block chain but have not been reflected in the storage yet,
 // update the storage status by calling the Finish() method on such claims
 func (service *ProviderControlService) StartClaim(ctx context.Context, startClaim *StartClaimRequest) (paymentReply *PaymentReply, err error) {
-	//Check if the mpe address matches to what is there in service metadata
+	// Check if the mpe address matches to what is there in service metadata
 	if err := service.checkMpeAddress(startClaim.MpeAddress); err != nil {
 		return nil, err
 	}
-	//Verify signature , check if “payment_address” matches to what is there in metadata
+	// Verify signature, check if “payment_address” matches to what is there in metadata
 	err = service.verifySignerForStartClaim(startClaim)
 	if err != nil {
 		return nil, err
 	}
-	//Remove any payments already claimed on block chain
+	// Remove any payments already claimed on blockchain
 	err = service.removeClaimedPayments()
 	if err != nil {
 		log.Error("unable to remove payments from etcd storage which are already claimed in block chain")
@@ -232,7 +234,7 @@ func (service *ProviderControlService) StartClaim(ctx context.Context, startClai
 
 // get the list of channels in progress which have some amount to be claimed.
 func (service *ProviderControlService) listChannels() (*PaymentsListReply, error) {
-	//get the list of channels in progress which have some amount to be claimed.
+	// get the list of channels from storage in progress which have some amount to be claimed.
 	channels, err := service.channelService.ListChannels()
 	if err != nil {
 		return nil, err
@@ -284,7 +286,7 @@ func (service *ProviderControlService) verifySigner(message []byte, signature []
 }
 
 // Begin the claim process on the current channel and Increment the channel nonce and
-// decrease the full amount to allow channel sender to continue working with remaining amount.
+// decrease the full amount to allow channel sender to continue working with the remaining amount.
 func (service *ProviderControlService) beginClaimOnChannel(channelId *big.Int) (*PaymentReply, error) {
 	latestChannel, ok, err := service.channelService.PaymentChannel(&PaymentChannelKey{ID: channelId})
 	if err != nil {
@@ -314,7 +316,7 @@ func (service *ProviderControlService) beginClaimOnChannel(channelId *big.Int) (
 	return paymentReply, nil
 }
 
-// Verify if the signer is same as the payment address in metadata
+// Verify if the signer is the same as the payment address in metadata
 // __start_claim”, mpe_address, channel_id, channel_nonce
 func (service *ProviderControlService) verifySignerForStartClaim(startClaim *StartClaimRequest) error {
 	channelId := bytesToBigInt(startClaim.GetChannelId())
@@ -342,7 +344,7 @@ func (service *ProviderControlService) listClaims() (*PaymentsListReply, error) 
 	output := make([]*PaymentReply, 0)
 	for _, claimRetrieved := range claimsRetrieved {
 		payment := claimRetrieved.Payment()
-		//To Get the Expiration of the Channel ( always get the latest state)
+		// To Get the Expiration of the Channel (always get the latest state)
 		latestChannel, ok, err := service.channelService.PaymentChannel(&PaymentChannelKey{ID: payment.ChannelID})
 		if !ok || err != nil {
 			log.Errorf("Unable to retrieve the latest Channel State, ChannelID: %v, ChannelNonde: %v", payment.ChannelID, payment.ChannelNonce)
@@ -373,10 +375,10 @@ func (service *ProviderControlService) verifySignerForListInProgress(request *Ge
 	return service.verifySigner(service.getMessageBytes("__list_in_progress", request), request.GetSignature())
 }
 
-// No write operation on block chains are done by Daemon (will be take care of by the snet client )
-// Finish on the claim should be called only after the payment is successfully claimed and block chain is updated accordingly.
-// One way to determine this is by checking the nonce in the block chain with the nonce in the payment,
-// for a given channel if the block chain nonce is greater than that of the nonce from etcd storage => that the claim is already done in block chain.
+// No write operation on blockchain are done by Daemon (will be take care of by the snet client)
+// Finish on the claim should be called only after the payment is successfully claimed and blockchain is updated accordingly.
+// One way to determine this is by checking the nonce in the blockchain with the nonce in the payment,
+// for a given channel if the blockchain nonce is greater than that of the nonce from etcd storage => that the claim is already done in blockchain.
 // and the Finish method is called on the claim.
 func (service *ProviderControlService) removeClaimedPayments() error {
 	//Get the pending claims

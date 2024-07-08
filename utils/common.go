@@ -24,9 +24,9 @@ func Serialize(value interface{}) (slice string, err error) {
 func Deserialize(slice string, value interface{}) (err error) {
 	b := bytes.NewBuffer([]byte(slice))
 	d := gob.NewDecoder(b)
-	err = d.Decode(value)
-	return
+	return d.Decode(value)
 }
+
 func VerifySigner(message []byte, signature []byte, signer common.Address) error {
 	derivedSigner, err := authutils.GetSignerAddressFromMessage(message, signature)
 	if err != nil {

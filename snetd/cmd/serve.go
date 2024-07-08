@@ -205,30 +205,28 @@ func (d *daemon) start() {
 			if grpcWebServer.IsGrpcWebRequest(req) || grpcWebServer.IsAcceptableGrpcCorsRequest(req) {
 				grpcWebServer.ServeHTTP(resp, req)
 				log.Println("IsGrpcWebRequest/IsAcceptableGrpcCorsRequest")
-				resp.Header().Set("Access-Control-Allow-Origin", "*")
 			} else {
-				if strings.Split(req.URL.Path, "/")[1] == "encoding" {
-					resp.Header().Set("Access-Control-Allow-Origin", "*")
+				switch strings.Split(req.URL.Path, "/")[1] {
+				case "encoding":
 					fmt.Fprintln(resp, d.components.ServiceMetaData().GetWireEncoding())
-				} else if strings.Split(req.URL.Path, "/")[1] == "heartbeat" {
-					resp.Header().Set("Access-Control-Allow-Origin", "*")
-					metrics.HeartbeatHandler(resp, d.components.daemonHeartbeat.TrainingInProto)
-				} else {
+				case "heartbeat":
+					metrics.HeartbeatHandler(resp, d.components.DaemonHeartBeat().TrainingInProto)
+				default:
 					http.NotFound(resp, req)
 				}
 			}
-			log.Println("output headers:")
+			log.Debugln("output headers:")
 			for key, value := range resp.Header() {
 				fmt.Printf("%s value is %v\n", key, value)
 			}
 		})
 
-		log.Debug("starting daemon")
+		log.Debugln("starting daemon")
 
 		corsOpts := cors.New(cors.Options{
-			AllowedOrigins: []string{"*"}, //you service is available and allowed for this base url
+			AllowedOrigins: []string{"*"},
 			AllowedMethods: []string{
-				http.MethodGet, //http methods for your app
+				http.MethodGet,
 				http.MethodPost,
 				http.MethodPut,
 				http.MethodPatch,

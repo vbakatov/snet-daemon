@@ -16,10 +16,10 @@ type PricingStrategy struct {
 	serviceMetaData *blockchain.ServiceMetadata
 }
 
-//Figure out which price type is to be used
+// Figure out which price type is to be used
 func (pricing PricingStrategy) determinePricingApplicable(context *handler.GrpcStreamContext) (priceType PriceType, err error) {
-	//For future , there could be multiple pricingTypes to select from and this method will help decide which pricing to pick
-	//but for now , we just have one pricing Type ( either Fixed Price or Fixed price per Method)
+	//For future, there could be multiple pricingTypes to select from and this method will help decide which pricing to pick
+	//but for now, we just have one pricing Type ( either Fixed Price or Fixed price per Method)
 
 	if config.GetBool(config.EnableDynamicPricing) {
 		//Use Dynamic pricing ONLY when you find the mapped price method to be called.
@@ -35,7 +35,7 @@ func (pricing PricingStrategy) determinePricingApplicable(context *handler.GrpcS
 	return pricing.pricingTypes[pricing.serviceMetaData.GetDefaultPricing().PriceModel], nil
 }
 
-//Initialize all the pricing types
+// Initialize all the pricing types
 func InitPricingStrategy(metadata *blockchain.ServiceMetadata) (*PricingStrategy, error) {
 	pricing := &PricingStrategy{serviceMetaData: metadata}
 
@@ -62,7 +62,7 @@ func (pricing PricingStrategy) GetPrice(GrpcContext *handler.GrpcStreamContext) 
 	}
 }
 
-//Set all the PricingStrategy Types in this method.
+// Set all the PricingStrategy Types in this method.
 func (pricing *PricingStrategy) initFromMetaData(metadata *blockchain.ServiceMetadata) (err error) {
 	var priceType PriceType
 

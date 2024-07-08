@@ -13,5 +13,4 @@ func Test_checkIfHttps(t *testing.T) {
 	assert.Equal(t, utils.CheckIfHttps(endpoint), true)
 	endpoint = []string{"http://snet-etcd.singularitynet.io:2379"}
 	assert.Equal(t, utils.CheckIfHttps(endpoint), false)
-
 }

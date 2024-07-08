@@ -360,7 +360,7 @@ func (components *Components) GrpcInterceptor() grpc.StreamServerInterceptor {
 	if components.grpcInterceptor != nil {
 		return components.grpcInterceptor
 	}
-	//Metering is now mandatory in Daemon
+	// Metering is now mandatory in Daemon
 	metrics.SetDaemonGrpId(components.OrganizationMetaData().GetGroupIdString())
 	if components.Blockchain().Enabled() && config.GetBool(config.MeteringEnabled) {
 
@@ -410,7 +410,6 @@ func (components *Components) verifyAuthenticationSetUpForFreeCall(serviceURL st
 		return false, err
 	}
 	return checkResponse(response)
-
 }
 
 // Check if the response received was proper

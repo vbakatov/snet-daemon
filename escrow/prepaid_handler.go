@@ -68,7 +68,7 @@ func (h *PrePaidPaymentHandler) Payment(context *handler.GrpcStreamContext) (tra
 	if validateErr != nil {
 		return nil, paymentErrorToGrpcError(validateErr)
 	}
-	//Increment the used amount
+	// Increment the used amount
 	if err := h.service.UpdateUsage(prePaidPayment.ChannelID, price, USED_AMOUNT); err != nil {
 		return nil, paymentErrorToGrpcError(err)
 	}
@@ -98,8 +98,8 @@ func (h *PrePaidPaymentHandler) getPaymentFromContext(context *handler.GrpcStrea
 	}, nil
 }
 
-//Just logging , as we increase the usage before calling the service
-//assuming the service call will be successful
+// Just logging , as we increase the usage before calling the service
+// assuming the service call will be successful
 func (h *PrePaidPaymentHandler) Complete(payment handler.Payment) (err *handler.GrpcError) {
 	prePaidTransaction := payment.(PrePaidTransaction)
 	log.Debugf("usage %v successfully updated and channel id: %v state is consistent",

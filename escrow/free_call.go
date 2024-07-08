@@ -3,6 +3,7 @@ package escrow
 import (
 	"fmt"
 	"github.com/singnet/snet-daemon/blockchain"
+	"github.com/singnet/snet-daemon/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -63,6 +64,7 @@ func (h *lockingFreeCallUserService) GetFreeCallUserKey(payment *FreeCallPayment
 	return &FreeCallUserKey{UserId: payment.UserId, OrganizationId: payment.OrganizationId,
 		ServiceId: payment.ServiceId, GroupID: blockchain.BytesToBase64(groupId[:])}, err
 }
+
 func (h *lockingFreeCallUserService) StartFreeCallUserTransaction(payment *FreeCallPayment) (transaction FreeCallTransaction, err error) {
 	userKey, err := h.GetFreeCallUserKey(payment)
 	if err != nil {
@@ -93,16 +95,21 @@ func (h *lockingFreeCallUserService) StartFreeCallUserTransaction(payment *FreeC
 		if err != nil {
 			e := lock.Unlock()
 			if e != nil {
-				//todo send a notification to the devloper ( contact email is in service metadata)
+				// todo send a notification to the developer (contact email is in service metadata)
 				log.WithError(e).WithField("userKey", userKey).WithField("err", err).Error("Transaction is cancelled because of err, but freeCallUserData cannot be unlocked. All other transactions on this freeCallUserData will be blocked until unlock. Please unlock freeCallUserData manually.")
 			}
 		}
 	}(lock)
 
-	//Check if free calls are allowed or not on this user
-	if freeCallUserData.FreeCallsMade >= h.serviceMetadata.GetFreeCallsAllowed() {
+	var countFreeCallsAllowed int
+	if countFreeCallsAllowed = config.GetFreeCallsCount(freeCallUserData.UserId); countFreeCallsAllowed <= 0 {
+		countFreeCallsAllowed = h.serviceMetadata.GetFreeCallsAllowed()
+	}
+
+	// Check if free calls are allowed or not on this user
+	if freeCallUserData.FreeCallsMade >= countFreeCallsAllowed {
 		return nil, fmt.Errorf("free call limit has been exceeded, calls made "+
-			"= %v,total free calls eligible = %v", freeCallUserData.FreeCallsMade, h.serviceMetadata.GetFreeCallsAllowed())
+			"= %v,total free calls eligible = %v", freeCallUserData.FreeCallsMade, countFreeCallsAllowed)
 	}
 	return &freeCallTransaction{
 		payment:         *payment,

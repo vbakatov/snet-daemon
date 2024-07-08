@@ -218,6 +218,7 @@ type OrganizationGroup struct {
 	Licenses       Licenses  `json:"licenses,omitempty"`
 	AddOns         []AddOns  `json:"addOns,omitempty"`
 }
+
 type Pricing struct {
 	PriceModel     string           `json:"price_model"`
 	PriceInCogs    *big.Int         `json:"price_in_cogs,omitempty"`

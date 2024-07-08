@@ -49,7 +49,7 @@ func (h *lockingPaymentChannelService) PaymentChannel(key *PaymentChannelKey) (c
 	blockchainChannel, blockchainOk, err := h.blockchainReader.GetChannelStateFromBlockchain(key)
 
 	if !storageOk {
-		//Group ID check is only done for the first time , when the channel is added to storage from the block chain ,
+		//Group ID check is only done for the first time, when the channel is added to storage from the block chain ,
 		//if the channel is already present in the storage the group ID check is skipped.
 		if blockchainChannel != nil {
 			blockChainGroupID, err := h.replicaGroupID()
@@ -66,7 +66,7 @@ func (h *lockingPaymentChannelService) PaymentChannel(key *PaymentChannelKey) (c
 	return MergeStorageAndBlockchainChannelState(storageChannel, blockchainChannel), true, nil
 }
 
-//Check if the channel belongs to the same group Id
+// Check if the channel belongs to the same group Id
 func (h *lockingPaymentChannelService) verifyGroupId(configGroupID [32]byte, blockChainGroupID [32]byte) error {
 	if blockChainGroupID != configGroupID {
 		log.WithField("configGroupId", configGroupID).Warn("Channel received belongs to another group of replicas")
@@ -111,7 +111,6 @@ func (h *lockingPaymentChannelService) StartClaim(key *PaymentChannelKey, update
 	channel, ok, err := h.storage.Get(key)
 	if err != nil {
 		log.WithError(err).WithField("channelKey", key).Error("StartClaim, unable to get channel from Storage!")
-
 		return
 	}
 	if !ok {

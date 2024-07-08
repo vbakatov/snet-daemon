@@ -60,7 +60,7 @@ func (service *FreeCallStateService) verify(request *FreeCallStateRequest) (err 
 }
 
 func (service *FreeCallStateService) checkForFreeCalls(payment *FreeCallPayment) (callsAvailable int, err error) {
-	//Now get the state from etcd for this user , if there are no records , then return the free calls
+	//Now get the state from etcd for this user, if there are no records, then return the free calls
 	key, err := service.freeCallService.GetFreeCallUserKey(payment)
 	if err != nil {
 		return 0, err
@@ -72,8 +72,10 @@ func (service *FreeCallStateService) checkForFreeCalls(payment *FreeCallPayment)
 	if err != nil {
 		return 0, err
 	}
-	callsAvailable = service.serviceMetadata.GetFreeCallsAllowed() - data.FreeCallsMade
-	return callsAvailable, nil
+	if freeCallsAllowed := config.GetFreeCallsCount(key.UserId); freeCallsAllowed > 0 {
+		return freeCallsAllowed - data.FreeCallsMade, err
+	}
+	return service.serviceMetadata.GetFreeCallsAllowed() - data.FreeCallsMade, nil
 }
 
 func (service *FreeCallStateService) getFreeCallPayment(request *FreeCallStateRequest) *FreeCallPayment {

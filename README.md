@@ -159,10 +159,10 @@ configuration properties can be set using configuration file.
 These properties you should usually change before starting daemon for the first
 time.
 
-* **blockchain_network_selected**  (required)
+* **blockchain_network_selected** (required)
   Name of the network to be used for Daemon possible values are one of (goerli, sepolia, main, local).
   Daemon will automatically read the Registry address associated with this network For local network ( you can also
-  specify the registry address manually),see the blockchain_network_config.json
+  specify the registry address manually), see the blockchain_network_config.json
 
 * **daemon_end_point** (required;) -
   Defines the ip and the port on which the daemon listens to.
@@ -202,7 +202,6 @@ time.
 * **executable_path** (required if `service_type` == `executable`) -
   path to executable to expose as a service.
 
-
 #### Blockchain network config
 
 You can update the registry address or ethereum_json_rpc_endpoint in `resources/blockchain_network_config.json`
@@ -214,16 +213,17 @@ This options are less frequently needed.
 * **service_credentials** (optional, for service_type http only):
   Array of credentials, example:
 
-```
-"service_credentials": [
-    {"key": "example_body_param", "value": 12345,"location": "body"},
-    {"key": "X-API-Key", "value": "546bd7d4-d3e1-46ba-b752-bc45e4dc5b39", "location": "header"}
-  ],
-```
+  ```
+  "service_credentials": [
+      {"key": "example_body_param", "value": 12345,"location": "body"},
+      {"key": "X-API-Key", "value": "546bd7d4-d3e1-46ba-b752-bc45e4dc5b39", "location": "header"}
+    ],
+  ```
 
-Location can be: query, header or body. Query and header values must be string.
+  Location can be: query, header or body. Query and header values must be string.
 
-* **allowed_users_flag** (optional;default:`false`) - You may need to protect the service provider 's service in test
+
+* **allowed_user_flag** (optional;default:`false`) - You may need to protect the service provider 's service in test
   environment from being called by anyone, only Authorized users can make calls , when this flag is defined in the
   config, you can enforce this behaviour.You cannot set this flag to true
   in mainnet.  
@@ -231,11 +231,25 @@ Location can be: query, header or body. Query and header values must be string.
   In which case it becomes mandatory to define the configuration `allowed_users`,
 
 * **allowed_user_addresses** (optional;) - List of selected user addresses who can make requests to Daemon
-  Is Applicable only when you have `allowed_users_flag set` to true.
+  Is Applicable only when you have `allowed_user_flag` set to true.
 
-* **authentication_address** (required if `You need to update Daemon configurations remotely`)
-  Contains the Authentication address that will be used to validate all requests to update Daemon configuration remotely
-  through a user interface ( Operator UI)
+* **authentication_addresses** (required if `You need to update Daemon configurations remotely`)
+  Contains the Authentication addresses
+  that will be used to validate all requests to update Daemon configuration remotely
+  through a user interface (Operator UI)
+
+* **free_calls_users**
+
+  You can set a separate number of allowed free calls for 
+  certain users of the marketplace
+
+  ```json
+  "free_calls_users": {
+      "johndoe@gmail.com": 500,
+      "snet@test.com": 100,
+      "me@email.com": 150
+  },
+  ```
 
 * **auto_ssl_domain** (optional; default: `""`) -  
   domain name for which the daemon should automatically acquire SSL certs
@@ -261,9 +275,9 @@ Location can be: query, header or body. Query and header values must be string.
   see [logger configuration](./logger/README.md)
 
 * **max_message_size_in_mb** (optional; default: `4`) -
-  The default value set is to 4 (units are in MB ), this is used to configure the max size in MB of the message received
+  The default value set is to 4 (units are in MB), this is used to configure the max size in MB of the message received
   by the Daemon.
-  In case of Large messages , it is recommended to use streaming than setting a very high value on this configuration.
+  In case of Large messages, it is recommended to use streaming than setting a very high value on this configuration.
   It is not recommended to set the value more than 4GB
   `Please make sure your grpc version > 1.25`
 
@@ -290,11 +304,11 @@ Location can be: query, header or body. Query and header values must be string.
   see [etcd server configuration](./etcddb#etcd-server-configuration)
 
 * **pvt_key_for_metering** (optional;only applies if `metering_enabled` is set to true)
-  This is used for authentication between daemon and the metering service in the context publishing stats , Even the
-  latest Channel Status is published , this way the offline channel state balance can also be tracked.
-  Daemon will send a signature signed by this private key , metering service will already have the public key
+  This is used for authentication between daemon and the metering service in the context publishing stats, Even the
+  latest Channel Status is published, this way the offline channel state balance can also be tracked.
+  Daemon will send a signature signed by this private key, metering service will already have the public key
   corresponding
-  to this Daemon ,metering service will ensure that the signer it receives matches the public key configured at its end.
+  to this Daemon, metering service will ensure that the signer it receives matches the public key configured at its end.
   This is mandatory only when metering is enabled.
 
 
@@ -305,7 +319,7 @@ Location can be: query, header or body. Query and header values must be string.
 * **registry_address_key** (Optional) -
   Ethereum address of the Registry contract instance.This is auto determined if not specified based on the
   blockchain_network_selected
-  If a value is specified , it will be used and no attempt will be made to auto determine the registry address.
+  If a value is specified, it will be used and no attempt will be made to auto determine the registry address.
 
 
 * **alerts_email** (optional; default: `""`) - It must be a valid email. if it is empty, then it is considered as alerts
@@ -326,7 +340,7 @@ Location can be: query, header or body. Query and header values must be string.
 
 * **is_curation_in_progress** (optional; default: `false`) - You may need to protect the service provider 's service in
   test environment from being called by anyone, only Authorized users can make calls , when this flag is set to true,
-  you can enforce this behaviour.Also see `curation_address_for_validation`
+  you can enforce this behaviour. Also see `curation_address_for_validation`
 
 * **token_expiry_in_minutes** (optional; default: `1440` minutes ~24hrs) - This is the default expiry time for a JWT
   token issued.

@@ -14,7 +14,7 @@ import (
 	"github.com/singnet/snet-daemon/config"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc/metadata"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"time"
@@ -22,7 +22,7 @@ import (
 
 const MeteringPrefix = "_usage"
 
-//Get the value of the first Pair
+// Get the value of the first Pair
 func GetValue(md metadata.MD, key string) string {
 	array := md.Get(key)
 	if len(array) == 0 {
@@ -31,8 +31,8 @@ func GetValue(md metadata.MD, key string) string {
 	return array[0]
 }
 
-//convert the given struct to its corresponding json.
-func ConvertStructToJSON(payLoad interface{}) ([]byte, error) {
+// convert the given struct to its corresponding json.
+func ConvertStructToJSON(payLoad any) ([]byte, error) {
 	if payLoad == nil {
 		return nil, errors.New("empty payload passed")
 	}
@@ -46,13 +46,13 @@ func ConvertStructToJSON(payLoad interface{}) ([]byte, error) {
 	return b, nil
 }
 
-//Generate a unique global Id
+// Generate a unique global Id
 func GenXid() string {
 	id := xid.New()
 	return id.String()
 }
 
-//convert the payload to JSON and publish it to the serviceUrl passed
+// convert the payload to JSON and publish it to the serviceUrl passed
 func Publish(payload interface{}, serviceUrl string, commonStats *CommonStats) bool {
 	jsonBytes, err := ConvertStructToJSON(payload)
 	if err != nil {
@@ -81,7 +81,7 @@ func publishJson(json []byte, serviceURL string, reTry bool, commonStats *Common
 	return false
 }
 
-//Set all the headers before publishing
+// Set all the headers before publishing
 func sendRequest(json []byte, serviceURL string, commonStats *CommonStats) (*http.Response, error) {
 	req, err := http.NewRequest("POST", serviceURL, bytes.NewBuffer(json))
 	if err != nil {
@@ -152,7 +152,7 @@ func signForMeteringValidation(privateKey *ecdsa.PrivateKey, currentBlock *big.I
 	return authutils.GetSignature(message, privateKey)
 }
 
-//Check if the response received was proper
+// Check if the response received was proper
 func checkForSuccessfulResponse(response *http.Response) (status bool, retry bool) {
 	if response == nil {
 		log.Warningf("Empty response received.")
@@ -170,7 +170,7 @@ func checkForSuccessfulResponse(response *http.Response) (status bool, retry boo
 	return true, false
 }
 
-//Check if the response received was proper
+// Check if the response received was proper
 func getTokenFromResponse(response *http.Response) (string, bool) {
 	if response == nil {
 		log.Warningf("Empty response received.")
@@ -180,7 +180,7 @@ func getTokenFromResponse(response *http.Response) (string, bool) {
 		log.Warningf("Service call failed with status code : %d ", response.StatusCode)
 		return "", false
 	}
-	body, err := ioutil.ReadAll(response.Body)
+	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		log.Infof("Unable to retrieve Token from Body , : %s ", err.Error())
 		return "", false
@@ -192,7 +192,7 @@ func getTokenFromResponse(response *http.Response) (string, bool) {
 	return data.Data.Token, true
 }
 
-//Generic utility to determine the size of the srtuct passed
+// Generic utility to determine the size of the srtuct passed
 func GetSize(v interface{}) uint64 {
 	return memory.Sizeof(v)
 }

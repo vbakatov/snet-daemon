@@ -94,7 +94,7 @@ func setRegistryAddress() (err error) {
 }
 
 func deriveDatafromJSON(data []byte) (err error) {
-	m := map[string]interface{}{}
+	m := map[string]any{}
 	err = json.Unmarshal(data, &m)
 	if err != nil {
 		return fmt.Errorf("cannot parse the registry JSON file for the network %v , the error is : %v",
