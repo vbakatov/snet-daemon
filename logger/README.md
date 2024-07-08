@@ -1,6 +1,6 @@
 # Logger configuration
 
-```snet-daemon``` uses [logrus](https://github.com/sirupsen/logrus) log
+```snet-daemon``` uses [zap](https://github.com/uber-go/zap) log
 library. Logger configuration is a set of properties started from ```log.```
 prefix. If configuration file is formatted using JSON then all logger
 configuration is one JSON object located in ```log``` field.
@@ -8,7 +8,7 @@ configuration is one JSON object located in ```log``` field.
 * **log** - log configuration section
 
   * **level** (default: info) - log level. Possible values are
-    [logrus](https://github.com/sirupsen/logrus) log levels
+    [zap](https://github.com/uber-go/zap) log levels
     * debug
     * info
     * warn
@@ -24,8 +24,7 @@ configuration is one JSON object located in ```log``` field.
     describes logger formatter configuration.
 
     * **type** (default: json) - type of the log formatter. Two types are
-      supported, which correspond to ```logrus``` formatter types, see [logrus
-      Formatter](https://github.com/sirupsen/logrus#formatters)
+      supported, which correspond to ```zap``` formatter types
       * json
       * text
 
@@ -39,9 +38,10 @@ configuration is one JSON object located in ```log``` field.
     * **type** (default: file) - type of the logger output. Two types are
       supported:
       * file -
-        [file-rotatelogs](https://github.com/lestrrat-go/file-rotatelogs)
+        [lumberjack](https://github.com/natefinch/lumberjack)
         output which supports log rotation
       * stdout - os.Stdout
+      * stderr - os.Stderr
 
     * **file_pattern** (default: ./snet-daemon.%Y%m%d.log) - log file name
       which may include date/time patterns in ```strftime (3)``` format. Time
@@ -50,10 +50,9 @@ configuration is one JSON object located in ```log``` field.
     * **current_link** (default: ./snet-daemon.log) - link to the latest log
       file.
 
-    * **rotation_time_in_sec** (default: 86400 (1 day)) - number of seconds
-      before log rotation happens.
+    * **max_size_in_mb** (default: 10 Mb) - max size of current log file in megabytes.
 
-    * **max_age_in_sec** (default: 604800 (1 week)) - number of seconds since
+    * **max_age_in_days** (default: 7 days) - number of days since
       last modification time before log file is removed.
 
     * **rotation_count** (default: 0 (disabled)) - max number of rotation
@@ -125,9 +124,9 @@ Resulting log configuration using logrus_mail hook:
     "output": {
       "current_link": "./snet-daemon.log",
       "file_pattern": "./snet-daemon.%Y%m%d.log",
-      "max_age_in_sec": 604800,
+      "max_age_in_days": 604800,
       "rotation_count": 0,
-      "rotation_time_in_sec": 86400,
+      "max_size_in_mb": 86400,
       "type": "file"
     },
     "timezone": "UTC"

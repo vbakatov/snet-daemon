@@ -2,12 +2,14 @@ package pricing
 
 import (
 	"fmt"
+	"math/big"
+	"strings"
+
 	"github.com/singnet/snet-daemon/blockchain"
 	"github.com/singnet/snet-daemon/config"
 	"github.com/singnet/snet-daemon/handler"
-	log "github.com/sirupsen/logrus"
-	"math/big"
-	"strings"
+
+	"go.uber.org/zap"
 )
 
 type PricingStrategy struct {
@@ -26,8 +28,7 @@ func (pricing PricingStrategy) determinePricingApplicable(context *handler.GrpcS
 		if _, ok := pricing.serviceMetaData.GetDynamicPricingMethodAssociated(context.Info.FullMethod); ok {
 			return pricing.pricingTypes[DYNAMIC_PRICING], nil
 		} else {
-			log.Infof("No Dynamic Price method defined in service proto for the method %v",
-				context.Info.FullMethod)
+			zap.L().Info("No Dynamic Price method defined in service proto", zap.String("Method", context.Info.FullMethod))
 		}
 
 	}
@@ -40,7 +41,7 @@ func InitPricingStrategy(metadata *blockchain.ServiceMetadata) (*PricingStrategy
 	pricing := &PricingStrategy{serviceMetaData: metadata}
 
 	if err := pricing.initFromMetaData(metadata); err != nil {
-		log.WithError(err)
+		zap.L().Error(err.Error())
 		return nil, err
 	}
 	return pricing, nil
@@ -82,7 +83,7 @@ func (pricing *PricingStrategy) initFromMetaData(metadata *blockchain.ServiceMet
 	}
 	if priceType == nil {
 		err = fmt.Errorf("No PricingStrategy strategy defined in Metadata ")
-		log.WithError(err)
+		zap.L().Error(err.Error())
 	}
 	return err
 

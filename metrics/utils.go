@@ -6,18 +6,20 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/OneOfOne/go-utils/memory"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/xid"
-	"github.com/singnet/snet-daemon/authutils"
-	"github.com/singnet/snet-daemon/config"
-	log "github.com/sirupsen/logrus"
-	"google.golang.org/grpc/metadata"
 	"io"
 	"math/big"
 	"net/http"
 	"time"
+
+	"github.com/singnet/snet-daemon/authutils"
+	"github.com/singnet/snet-daemon/config"
+
+	"github.com/OneOfOne/go-utils/memory"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/xid"
+	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 )
 
 const MeteringPrefix = "_usage"
@@ -32,17 +34,17 @@ func GetValue(md metadata.MD, key string) string {
 }
 
 // convert the given struct to its corresponding json.
-func ConvertStructToJSON(payLoad any) ([]byte, error) {
-	if payLoad == nil {
+func ConvertStructToJSON(payload any) ([]byte, error) {
+	if payload == nil {
 		return nil, errors.New("empty payload passed")
 	}
-	b, err := json.Marshal(&payLoad)
+	b, err := json.Marshal(&payload)
 	if err != nil {
-		log.WithError(err).Warningf("Json conversion error.")
-		log.WithField("payLoad", payLoad).Warningf("Unable to derive json from structure passed")
+		zap.L().Warn("json conversion error.", zap.Error(err))
+		zap.L().Warn("unable to derive json from structure passed", zap.Any("payload", payload))
 		return nil, err
 	}
-	log.WithField("payload", string(b)).Debug("payload")
+	zap.L().Debug("success json conversion", zap.Any("payload", payload))
 	return b, nil
 }
 
@@ -60,7 +62,7 @@ func Publish(payload interface{}, serviceUrl string, commonStats *CommonStats) b
 	}
 	status := publishJson(jsonBytes, serviceUrl, true, commonStats)
 	if !status {
-		log.WithField("payload", string(jsonBytes)).WithField("url", serviceUrl).Warning("Unable to publish metrics")
+		zap.L().Warn("Unable to publish metrics", zap.Any("payload", jsonBytes), zap.Any("url", serviceUrl))
 	}
 	return status
 }
@@ -69,7 +71,7 @@ func Publish(payload interface{}, serviceUrl string, commonStats *CommonStats) b
 func publishJson(json []byte, serviceURL string, reTry bool, commonStats *CommonStats) bool {
 	response, err := sendRequest(json, serviceURL, commonStats)
 	if err != nil {
-		log.WithError(err)
+		zap.L().Error(err.Error())
 	} else {
 		status, reRegister := checkForSuccessfulResponse(response)
 		if reRegister && reTry {
@@ -85,7 +87,7 @@ func publishJson(json []byte, serviceURL string, reTry bool, commonStats *Common
 func sendRequest(json []byte, serviceURL string, commonStats *CommonStats) (*http.Response, error) {
 	req, err := http.NewRequest("POST", serviceURL, bytes.NewBuffer(json))
 	if err != nil {
-		log.WithField("serviceURL", serviceURL).WithError(err).Warningf("Unable to create service request to publish stats")
+		zap.L().Warn("Unable to create service request to publish stats", zap.Any("serviceURL", serviceURL))
 		return nil, err
 	}
 	// sending the post request
@@ -106,12 +108,12 @@ func SignMessageForMetering(req *http.Request, commonStats *CommonStats) {
 
 	privateKey, err := getPrivateKeyForMetering()
 	if err != nil {
-		log.Error(err)
+		zap.L().Error(err.Error())
 		return
 	}
 	currentBlock, err := authutils.CurrentBlock()
 	if err != nil {
-		log.Error(err)
+		zap.L().Error(err.Error())
 		return
 	}
 
@@ -132,7 +134,7 @@ func getPrivateKeyForMetering() (privateKey *ecdsa.PrivateKey, err error) {
 		if err != nil {
 			return nil, err
 		}
-		log.WithField("public key", crypto.PubkeyToAddress(privateKey.PublicKey).String())
+		zap.L().Info("Get public key for matering", zap.String("public key", crypto.PubkeyToAddress(privateKey.PublicKey).String()))
 	}
 
 	return
@@ -155,17 +157,17 @@ func signForMeteringValidation(privateKey *ecdsa.PrivateKey, currentBlock *big.I
 // Check if the response received was proper
 func checkForSuccessfulResponse(response *http.Response) (status bool, retry bool) {
 	if response == nil {
-		log.Warningf("Empty response received.")
+		zap.L().Warn("Empty response received.")
 		return false, false
 	}
 	if response.StatusCode != http.StatusOK {
-		log.Warningf("Service call failed with status code : %d ", response.StatusCode)
+		zap.L().Warn("Service call failed", zap.Int("StatusCode", response.StatusCode))
 		//if response returned was forbidden error , then re register Daemon with fresh token and submit the request / response
 		//again ONLY if the Daemon was registered successfully
 
 		return false, false
 	} //close the body
-	log.Debugf("Metrics posted successfully with status code : %d ", response.StatusCode)
+	zap.L().Debug("Metrics posted successfully", zap.Int("StatusCode", response.StatusCode))
 	defer response.Body.Close()
 	return true, false
 }
@@ -173,16 +175,16 @@ func checkForSuccessfulResponse(response *http.Response) (status bool, retry boo
 // Check if the response received was proper
 func getTokenFromResponse(response *http.Response) (string, bool) {
 	if response == nil {
-		log.Warningf("Empty response received.")
+		zap.L().Warn("Empty response received.")
 		return "", false
 	}
 	if response.StatusCode != http.StatusOK {
-		log.Warningf("Service call failed with status code : %d ", response.StatusCode)
+		zap.L().Warn("Service call failed", zap.Int("StatusCode", response.StatusCode))
 		return "", false
 	}
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Infof("Unable to retrieve Token from Body , : %s ", err.Error())
+		zap.L().Info("Unable to retrieve Token from Body", zap.Error(err))
 		return "", false
 	}
 	var data TokenGenerated

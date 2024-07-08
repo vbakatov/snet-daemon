@@ -3,10 +3,11 @@ package utils
 import (
 	"bytes"
 	"encoding/gob"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/singnet/snet-daemon/authutils"
-	log "github.com/sirupsen/logrus"
-	"strings"
+	"go.uber.org/zap"
 )
 
 func Serialize(value interface{}) (slice string, err error) {
@@ -30,7 +31,7 @@ func Deserialize(slice string, value interface{}) (err error) {
 func VerifySigner(message []byte, signature []byte, signer common.Address) error {
 	derivedSigner, err := authutils.GetSignerAddressFromMessage(message, signature)
 	if err != nil {
-		log.Error(err)
+		zap.L().Error(err.Error())
 		return err
 	}
 	if err = authutils.VerifyAddress(*derivedSigner, signer); err != nil {

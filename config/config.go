@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"net"
 	"net/url"
@@ -12,7 +11,9 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/ethereum/go-ethereum/common"
+	"go.uber.org/zap"
+
 	"github.com/spf13/cast"
 	"github.com/spf13/viper"
 )
@@ -99,14 +100,14 @@ const (
 		"timezone": "UTC",
 		"formatter": {
 			"type": "text",
-			"timestamp_format": "2006-01-02T15:04:05.999999999Z07:00"
+			"timestamp_format": "2006-01-02T15:04:05.999Z07:00"
 		},
 		"output": {
 			"type": "file",
-			"file_pattern": "./snet-daemon.%Y%m%d$M.log",
+			"file_pattern": "./snet-daemon.%Y%m%d.log",
 			"current_link": "./snet-daemon.log",
-			"rotation_time_in_sec": 86400,
-			"max_age_in_sec": 604800,
+			"max_size_in_mb": 10,
+			"max_age_in_days": 7,
 			"rotation_count": 0
 		},
 		"hooks": []
@@ -127,12 +128,13 @@ const (
 		"startup_timeout": "1m",
 		"data_dir": "storage-data-dir-1.etcd",
 		"log_level": "info",
+		"log_outputs": ["./etcd-server.log", "stdout"],
 		"enabled": false
 	},
 	"alerts_email": "", 
 	"service_heartbeat_type": "http",
     "token_expiry_in_minutes": 1440,
-    "model_training_enabled":false
+    "model_training_enabled": false
 }`
 	MinimumConfigJson string = ` {
 	"blockchain_enabled": true,
@@ -156,8 +158,10 @@ const (
 		"output": {
 			"type": "file",
 		}
-},
+	},
 	"payment_channel_storage_client": {
+		"connection_timeout": "5s",
+		"request_timeout": "3s",
 		"endpoints": ["http://127.0.0.1:2379"]
 	}}`
 )
@@ -179,6 +183,12 @@ func init() {
 	SetDefaultFromConfig(vip, defaults)
 
 	vip.AddConfigPath(".")
+}
+
+// SetVip allows setting a new Viper instance.
+// This is useful for testing, where you may want to change the configuration.
+func SetVip(newVip *viper.Viper) {
+	vip = newVip
 }
 
 // ReadConfigFromJsonString function reads settigs from json string to the
@@ -223,15 +233,15 @@ func Validate() error {
 		return err
 	}
 
-	//Check if the Daemon is on the latest version or not
+	// Check if the Daemon is on the latest version or not
 	if message, err := CheckVersionOfDaemon(); err != nil {
 		//In case of any error on version check , just log it
-		log.Warning(err)
+		zap.L().Warn(err.Error())
 	} else {
-		log.Info(message)
+		zap.L().Info(message)
 	}
 
-	// the maximum that the server can receive to 2GB.
+	// Check maximum message size (The maximum that the server can receive - 2GB).
 	maxMessageSize := vip.GetInt(MaxMessageSizeInMB)
 	if maxMessageSize <= 0 || maxMessageSize > 2048 {
 		return errors.New(" max_message_size_in_mb cannot be more than 2GB (i.e 2048 MB) and has to be a positive number")
@@ -239,6 +249,7 @@ func Validate() error {
 	if err = allowedUserConfigurationChecks(); err != nil {
 		return err
 	}
+
 	return validateMeteringChecks()
 }
 
@@ -308,6 +319,10 @@ func GetFreeCallsCount(userID string) (countFreeCallsAllowed int) {
 	return
 }
 
+func GetStringSlice(key string) []string {
+	return vip.GetStringSlice(key)
+}
+
 func Get(key string) any {
 	return vip.Get(key)
 }
@@ -370,12 +385,12 @@ var DisplayKeys = map[string]bool{
 }
 
 func LogConfig() {
-	log.Info("Final configuration:")
+	zap.L().Info("Final configuration: ")
 	keys := vip.AllKeys()
 	sort.Strings(keys)
 	for _, key := range keys {
 		if DisplayKeys[strings.ToUpper(key)] {
-			log.Infof("%v: %v", key, vip.Get(key))
+			zap.L().Info(key, zap.Any("value", vip.Get(key)))
 		}
 	}
 }
@@ -429,7 +444,7 @@ var userAddress []common.Address
 
 func IsAllowedUser(address *common.Address) bool {
 	for _, user := range userAddress {
-		log.Println("userAddressFromConfig:" + user.Hex() + "<>" + address.Hex())
+		zap.L().Info("user address from config", zap.String("value", user.Hex()+"<>"+address.Hex()))
 		if user == *address {
 			return true
 		}
