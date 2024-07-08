@@ -54,10 +54,7 @@ func StringToBytes32(str string) [32]byte {
 }
 
 func RemoveSpecialCharactersfromHash(pString string) string {
-	reg, err := regexp.Compile("[^a-zA-Z0-9=]")
-	if err != nil {
-		zap.L().Panic(err.Error())
-	}
+	reg := regexp.MustCompile("[^a-zA-Z0-9=]")
 	return reg.ReplaceAllString(pString, "")
 }
 
